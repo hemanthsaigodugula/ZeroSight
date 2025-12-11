@@ -1,0 +1,455 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>ZeroSight — Real-Time Phishing Threat Scanner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg:#041026;
+  --card:rgba(255,255,255,0.03);
+  --accent-green:#6bff8a;
+  --accent-green-2:#00ff96;
+  --muted:#9bb3d9;
+  --glass: rgba(255,255,255,0.02);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#020617 0%, #041026 100%);color:#e6f8ff;-webkit-font-smoothing:antialiased}
+.container{max-width:1200px;margin:18px auto;padding:18px;position:relative;z-index:2}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.brand{display:flex;gap:12px;align-items:center}
+.logo svg{border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+.title{font-weight:900;font-size:2rem;color:var(--accent-green);letter-spacing:1px;text-shadow: 0 0 12px rgba(0,255,140,0.9), 0 0 25px rgba(0,255,100,0.6), 0 0 40px rgba(0,255,140,0.35);}
+.subtitle{font-size:1rem;color:#8cffc5;text-shadow:0 0 6px rgba(0,255,160,0.5),0 0 12px rgba(0,255,160,0.3)}
+.controls{display:flex;gap:8px;align-items:center}
+.input{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:rgba(0,8,16,0.4);color:#e6f8ff;width:420px;outline:none}
+.btn{padding:10px 12px;border-radius:12px;border:none;cursor:pointer;font-weight:800;letter-spacing:0.6px;box-shadow:0 8px 30px rgba(0,0,0,0.5);transition:transform .12s ease, box-shadow .12s ease}
+.btn:active{transform:translateY(1px)}
+.btn-scan {
+  background: linear-gradient(90deg,var(--accent-green), var(--accent-green-2));
+  color:#001;
+  text-shadow: 0 0 8px rgba(0,255,140,0.6);
+  box-shadow: 0 6px 30px rgba(0,255,140,0.08), inset 0 -2px 10px rgba(0,0,0,0.15);
+}
+.btn-scan:hover { box-shadow: 0 12px 50px rgba(0,255,140,0.12); transform:translateY(-2px); }
+
+.btn-clear {
+  background: linear-gradient(90deg,#9b7bff,#5af3ff);
+  color:#001;
+  text-shadow:0 0 6px rgba(95,255,220,0.45);
+}
+.btn-clear:hover { transform:translateY(-2px); box-shadow:0 12px 40px rgba(90,243,255,0.08); }
+
+.grid{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}
+@media(max-width:1040px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.02);box-shadow:0 12px 40px rgba(0,0,0,0.6)}
+.feed{max-height:64vh;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:12px}
+.event{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.007), rgba(255,255,255,0.004));border:1px solid rgba(255,255,255,0.02);transition:transform .12s, box-shadow .12s}
+.event:hover{transform:translateY(-4px);box-shadow:0 18px 60px rgba(0,0,0,0.6)}
+.left{flex:1}
+.meta{color:var(--muted);margin-top:6px;font-size:0.92rem}
+.badge{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:900}
+.level-safe{background:linear-gradient(90deg,#7ff1ff33,#aef1ff22);color:#07373a}
+.level-med{background:linear-gradient(90deg,#fff1b233,#fff1b622);color:#3b2a00}
+.level-high{background:linear-gradient(90deg,#ff9aa833,#ff7b9a22);color:#330004}
+.ev-actions{display:flex;gap:8px;align-items:center}
+.icon-btn{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);background:rgba(255,255,255,0.02);cursor:pointer;color:#dfefff;font-weight:700}
+.icon-btn:hover{box-shadow:0 12px 40px rgba(0,0,0,0.6);transform:translateY(-2px)}
+
+.small{font-size:0.86rem;color:#a9c4e8}
+.small-muted{font-size:0.82rem;color:var(--muted);margin-top:6px}
+.footer{margin-top:12px;text-align:center;color:#94b7df}
+
+/* CLARITY HELP / LEGEND */
+.legend {
+  position: fixed;
+  left: 22px;
+  top: 98px;
+  width: 300px;
+  z-index: 30;
+  backdrop-filter: blur(6px);
+  background: linear-gradient(180deg, rgba(2,6,14,0.72), rgba(5,12,24,0.56));
+  border: 1px solid rgba(255,255,255,0.04);
+  color: #cfefff;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  font-size: 13px;
+}
+.legend h4{margin:0 0 6px 0;color:var(--accent-green);font-size:15px}
+.legend .row{display:flex;align-items:center;gap:8px;margin:6px 0}
+.legend .dot{width:12px;height:12px;border-radius:50%}
+.legend .dot.safe{background:#5af3ff}
+.legend .dot.med{background:#ffd166}
+.legend .dot.high{background:#ff6b8a}
+.legend .hint{font-size:12px;color:#a9cfef}
+.legend .small-btn{margin-top:8px;display:inline-block;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02);cursor:pointer;font-weight:700}
+.tooltip {
+  position: absolute;
+  background: rgba(2,6,14,0.98);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 8px;
+  color: #dbeeff;
+  border-radius: 8px;
+  z-index: 60;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+  max-width: 360px;
+  font-size: 12px;
+  display:none;
+}
+
+/* small responsiveness tweaks */
+@media (max-width:700px){
+  .input{width:160px}
+  .legend{display:none}
+}
+</style>
+</head>
+<body>
+<canvas id="matrix" style="position:fixed;inset:0;z-index:0;opacity:0.14;filter:blur(0.6px)"></canvas>
+
+<div class="container">
+
+  <!-- LEGEND / HELP PANEL -->
+  <div class="legend" id="zsLegend" role="note" aria-label="ZeroSight legend">
+    <h4>ZeroSight — Quick Legend</h4>
+    <div class="row"><div class="dot safe"></div><div><strong>GREEN — Likely Safe</strong><div class="hint">score &lt; 35</div></div></div>
+    <div class="row"><div class="dot med"></div><div><strong>YELLOW — Medium</strong><div class="hint">35 ≤ score &lt; 70 — suspicious pattern(s)</div></div></div>
+    <div class="row"><div class="dot high"></div><div><strong>RED — High</strong><div class="hint">score ≥ 70 — strong phishing signs</div></div></div>
+
+    <div style="margin-top:8px;font-size:13px;color:#bfe8ff">
+      <div><strong>Reasons:</strong> shown under each result — explains what heuristic tripped.</div>
+      <div class="hint" style="margin-top:6px">Tip: click any reason to expand full details. Use "Mark Safe" if false positive.</div>
+    </div>
+    <div style="margin-top:8px;"><span class="small-btn" id="legendClose">Hide</span></div>
+  </div>
+
+  <!-- floating tooltip popup -->
+  <div id="zsTooltip" class="tooltip" aria-hidden="true"></div>
+
+  <div class="header">
+    <div class="brand">
+      <div class="logo">
+        <!-- Inline ZS SVG logo -->
+        <svg width="48" height="48" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="zsgrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6bff8a"/>
+              <stop offset="100%" stop-color="#00ff96"/>
+            </linearGradient>
+          </defs>
+          <rect x="5" y="5" width="90" height="90" rx="14" fill="url(#zsgrad)"/>
+          <text x="50" y="63" font-size="42" font-weight="900" fill="#001" text-anchor="middle" font-family="Inter,Arial">ZS</text>
+        </svg>
+      </div>
+      <div>
+        <div class="title">ZeroSight</div>
+        <div class="subtitle">Real-Time Phishing Threat Scanner — ZeroDay Squad</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <input id="link" class="input" placeholder="Paste URL (e.g. https://instagram-login.trycloudflare.com)">
+      <button id="scanBtn" class="btn btn-scan">Scan</button>
+      <button id="clearBtn" class="btn btn-clear">Clear</button>
+    </div>
+  </div>
+
+  <!-- instant risk badge -->
+  <div style="margin-bottom:8px"><span id="instantRisk" class="small"></span></div>
+
+  <div class="grid">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div>
+          <div class="small">Live Feed</div>
+          <div class="small-muted">Recent scanned URLs</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="search" class="input" placeholder="Search URL or reason" style="width:240px">
+          <select id="sortBy" class="input" style="width:160px">
+            <option value="time">Sort: Newest</option>
+            <option value="risk">Sort: Risk (High→Low)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="feed" id="feed"></div>
+    </div>
+
+    <div class="card">
+      <div class="small" style="margin-bottom:8px">Actions & Analysis</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button id="showThreats" class="icon-btn">Show Threats</button>
+        <button id="showAll" class="icon-btn">Show All</button>
+        <button id="pauseLive" class="icon-btn">Pause Live</button>
+        <button id="toggleMatrix" class="icon-btn">Toggle Matrix</button>
+        <button id="exportCSV" class="icon-btn">Export CSV</button>
+        <button id="downloadReport" class="icon-btn">Download Report</button>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="small">Risk Analysis</div>
+        <canvas id="riskChart" style="width:100%;height:180px"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">ZeroSight • ZeroDay Squad</div>
+</div>
+
+<script>
+/* ---------- Matrix Background (smooth) ---------- */
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+let animId=null, cols=0, drops=[], fontSize=14;
+function setupMatrix(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  fontSize = Math.max(12, Math.floor(window.innerWidth / 120));
+  cols = Math.floor(canvas.width / fontSize);
+  drops = Array.from({length: cols}).map(()=>Math.floor(Math.random()*canvas.height/fontSize));
+  ctx.font = fontSize + 'px monospace';
+}
+window.addEventListener('resize', setupMatrix);
+setupMatrix();
+const letters = '0123456789ABCDEFあいうえおサイバー零'.split('');
+function matrixLoop(){
+  ctx.fillStyle = 'rgba(0,8,20,0.06)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  for(let i=0;i<cols;i++){
+    const x=i*fontSize, y=drops[i]*fontSize;
+    const ch = letters[Math.floor(Math.random()*letters.length)];
+    ctx.fillStyle = (i%7===0)? 'rgba(107,255,138,0.95)' : 'rgba(120,200,255,0.14)';
+    ctx.fillText(ch, x, y);
+    drops[i]++; if(drops[i]*fontSize > canvas.height && Math.random()>0.98) drops[i]=0;
+  }
+  animId = requestAnimationFrame(matrixLoop);
+}
+matrixLoop();
+
+/* ---------- Chart ---------- */
+let chart, chartData={labels:[], datasets:[{label:'Risk', data:[], fill:true, backgroundColor:'rgba(107,255,138,0.06)', borderColor:'#6bff8a', tension:0.25}]};
+function initChart(){
+  const ctxc = document.getElementById('riskChart').getContext('2d');
+  chart = new Chart(ctxc, {type:'line', data:chartData, options:{responsive:true, animation:false, scales:{y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.03)'}}, x:{grid:{display:false}}}, plugins:{legend:{display:false}}}});
+}
+initChart();
+
+/* ---------- Data store ---------- */
+let samples = []; // mirrored from server
+const feedEl = document.getElementById('feed');
+const pointsLimit = 20;
+
+/* ---------- Utility / Build event ---------- */
+function formatTime(ts){ return new Date(ts*1000).toLocaleTimeString(); }
+function buildEventElement(s){
+  const ev = document.createElement('div'); ev.className='event';
+  const lvlClass = s.level === 'HIGH' ? 'level-high' : (s.level === 'MEDIUM' ? 'level-med' : 'level-safe');
+  const left = document.createElement('div'); left.className='left';
+
+  const reasonText = (s.reasons && s.reasons.length) ? s.reasons.join('; ') : 'No details';
+  const displayReason = reasonText.length>80 ? reasonText.slice(0,80)+'… (click to expand)' : reasonText;
+  const reasonSpan = `<div class="meta"><span class="reason-compact" data-full="${(reasonText.replace(/"/g,'&quot;'))}">${displayReason}</span></div>`;
+
+  left.innerHTML = `<div><span class="badge ${lvlClass}">${s.level}</span>&nbsp;<strong>${s.url}</strong></div>
+    ${reasonSpan}
+    <div class="meta" style="margin-top:6px;color:var(--muted)">Time: ${formatTime(s.ts)}</div>`;
+  ev.appendChild(left);
+
+  const actions = document.createElement('div'); actions.className='ev-actions';
+  const pinBtn = document.createElement('button'); pinBtn.className='icon-btn'; pinBtn.innerText = s.pinned ? 'Pinned' : 'Pin';
+  pinBtn.onclick = ()=>{ s.pinned = !s.pinned; renderFeed(); updateChart(); };
+  const safeBtn = document.createElement('button'); safeBtn.className='icon-btn'; safeBtn.innerText='Mark Safe';
+  safeBtn.onclick = ()=>{ s.level='SAFE'; s.score = Math.min(20, s.score); renderFeed(); updateChart(); };
+  const medBtn = document.createElement('button'); medBtn.className='icon-btn'; medBtn.innerText='Mark Medium';
+  medBtn.onclick = ()=>{ s.level='MEDIUM'; s.score = Math.max(30, s.score); renderFeed(); updateChart(); };
+  const delBtn = document.createElement('button'); delBtn.className='icon-btn'; delBtn.innerText='Delete';
+  delBtn.onclick = ()=>{ if(confirm('Delete this event?')){ samples = samples.filter(x=>x!==s); renderFeed(); updateChart(); }};
+
+  actions.appendChild(pinBtn); actions.appendChild(medBtn); actions.appendChild(safeBtn); actions.appendChild(delBtn);
+  ev.appendChild(actions);
+  if(s.pinned) ev.style.order = -1;
+  return ev;
+}
+
+function renderFeed(filterList=null){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const sortBy = document.getElementById('sortBy').value;
+  let list = filterList ? filterList.slice() : samples.slice();
+  if(q) list = list.filter(it => (it.url||'').toLowerCase().includes(q) || (it.reasons||[]).join(' ').toLowerCase().includes(q));
+  if(sortBy === 'risk') list.sort((a,b)=> (b.score||0) - (a.score||0)); else list.sort((a,b)=> (b.ts||0) - (a.ts||0));
+  const frag = document.createDocumentFragment();
+  list.forEach(s => frag.appendChild(buildEventElement(s)));
+  feedEl.innerHTML = ''; feedEl.appendChild(frag);
+}
+
+function updateChart(){
+  const recent = samples.slice(-pointsLimit);
+  chartData.labels = recent.map(r => new Date(r.ts*1000).toLocaleTimeString().replace(/:\d+ /,' '));
+  chartData.datasets[0].data = recent.map(r => r.score || 0);
+  chart.update('none');
+}
+
+/* ---------- Instant client-side risk check (Cloudflare-like) ---------- */
+function instantRiskCheck(url){
+  const badge = document.getElementById('instantRisk');
+  if(!badge) return null;
+  if(!url || !url.trim()){ badge.innerHTML=''; return null; }
+  const raw = url.trim();
+  let host = raw;
+  try { host = new URL(raw.includes('://')? raw : 'https://'+raw).hostname.toLowerCase(); } catch(e){ host = raw.split('/')[0].toLowerCase(); }
+
+  const ephemeralHosts = ["trycloudflare.com","workers.dev","pages.dev","vercel.app","netlify.app","ngrok.io","herokuapp.com","github.io","pagekite.me"];
+  const brandTokens = ["instagram","paypal","google","facebook","amazon","microsoft","sbi","hdfc","icici","bank","upi","gmail","otp"];
+  const shorteners = ["bit.ly","tinyurl","t.co","is.gd","rb.gy","ow.ly"];
+  let score=0; const reasons=[];
+
+  // ephemeral host
+  for(const eh of ephemeralHosts){ if(host===eh || host.endsWith('.'+eh)){ score+=35; reasons.push('Hosted on ephemeral platform: '+eh); break; } }
+
+  // subdomain analysis
+  const parts = host.split('.');
+  if(parts.length >= 3){
+    const sub = parts.slice(0, parts.length-2).join('.');
+    if(sub.length > 30){ score+=15; reasons.push('Very long subdomain'); }
+    if((sub.match(/-/g)||[]).length >= 2){ score+=10; reasons.push('Multiple hyphens'); }
+    if(sub.split(/[-_.]/).filter(Boolean).length >= 3){ score+=12; reasons.push('Multi-word subdomain'); }
+    const lowSub = sub.toLowerCase();
+    for(const b of brandTokens){ if(lowSub.includes(b)){ score+=40; reasons.push('Brand token in subdomain: '+b); break; } }
+  }
+
+  // shorteners & keywords
+  for(const s of shorteners){ if(raw.includes(s)){ score+=30; reasons.push('Known shortener: '+s); break; } }
+  const keywords = ["verify","login","reset","auth","secure","confirm","payment","account","signin"];
+  for(const k of keywords){ if(raw.toLowerCase().includes(k)){ score+=12; reasons.push('Contains keyword: '+k); break; } }
+
+  // punycode
+  if(host.indexOf('xn--') !== -1){ score+=20; reasons.push('Punycode/IDN'); }
+
+  score = Math.min(100, score);
+  const level = score >= 70 ? 'HIGH' : (score >= 35 ? 'MEDIUM' : 'SAFE');
+
+  if(level === 'HIGH'){ badge.innerHTML = '🔴 HIGH — ' + (reasons[0] || 'suspicious domain'); badge.style.color = '#ff6b8a'; }
+  else if(level === 'MEDIUM'){ badge.innerHTML = '🟡 MEDIUM — ' + (reasons[0] || 'check details'); badge.style.color = '#ffd166'; }
+  else { badge.innerHTML = '🟢 Likely Safe'; badge.style.color = 'var(--accent-green)'; }
+
+  return {level, score, reasons, host};
+}
+
+/* ---------- Polling (fetch latest from server) ---------- */
+let livePaused = false;
+async function fetchLatest(){
+  if(livePaused) return;
+  try{
+    const res = await fetch('/api/latest');
+    const j = await res.json();
+    samples = j.samples || [];
+    renderFeed();
+    updateChart();
+  }catch(e){ console.error('fetch error', e); }
+}
+fetchLatest();
+setInterval(fetchLatest, 1200);
+
+/* ---------- Buttons ---------- */
+document.getElementById('scanBtn').addEventListener('click', async ()=>{
+  const url = document.getElementById('link').value.trim();
+  if(!url) return alert('Paste a URL');
+  try{
+    const resp = await fetch('/api/check_link', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})});
+    if(!resp.ok) { alert('Server error'); return; }
+    document.getElementById('link').value = '';
+    fetchLatest();
+  }catch(e){ alert('Server error: ' + e.message); }
+});
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{ if(confirm('Clear events?')){ samples=[]; renderFeed(); updateChart(); }});
+document.getElementById('showThreats').addEventListener('click', ()=> renderFeed(samples.filter(s=> s.level === 'HIGH' || s.level === 'MEDIUM')));
+document.getElementById('showAll').addEventListener('click', ()=> renderFeed());
+document.getElementById('pauseLive').addEventListener('click', (e)=>{ livePaused = !livePaused; e.target.innerText = livePaused ? 'Resume Live' : 'Pause Live'; });
+document.getElementById('toggleMatrix').addEventListener('click', (e)=>{ if(animId){ cancelAnimationFrame(animId); animId = null; ctx.clearRect(0,0,canvas.width,canvas.height); e.target.innerText='Matrix OFF'; } else { matrixLoop(); e.target.innerText='Toggle Matrix'; }});
+document.getElementById('exportCSV').addEventListener('click', ()=>{
+  if(!samples.length) return alert('No data');
+  const rows = [['timestamp','url','score','level','reasons']];
+  samples.forEach(s => rows.push([new Date(s.ts*1000).toISOString(), s.url.replace(/"/g,'""'), s.score, s.level, (s.reasons||[]).join('|')]));
+  const csv = rows.map(r => r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='zerosight_export.csv'; a.click(); URL.revokeObjectURL(url);
+});
+document.getElementById('downloadReport').addEventListener('click', ()=>{
+  if(!samples.length) return alert('No data');
+  const lines = ['ZeroSight Report - ZeroDay Squad', 'Generated: ' + new Date().toLocaleString(), ''];
+  samples.forEach(s => lines.push(`${new Date(s.ts*1000).toLocaleString()} | ${s.level} | ${s.score} | ${s.url} | ${(s.reasons||[]).join('; ')}`));
+  const blob = new Blob([lines.join('\n')], {type:'text/plain'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='zerosight_report.txt'; a.click(); URL.revokeObjectURL(url);
+});
+
+/* search & sort */
+document.getElementById('search').addEventListener('input', ()=> renderFeed());
+document.getElementById('sortBy').addEventListener('change', ()=> renderFeed());
+
+/* instantRisk live listener */
+document.getElementById('link').addEventListener('input', (e)=> instantRiskCheck(e.target.value) );
+
+/* demo seeds to populate when empty (optional) */
+const seeds = [
+  {url:'http://bit.ly/test-login-verify',score:55,level:'MEDIUM',reasons:['Uses known shortener','Contains phishing keyword: verify'],ts: Math.floor(Date.now()/1000)-40},
+  {url:'https://example.com',score:5,level:'SAFE',reasons:[],ts: Math.floor(Date.now()/1000)-80},
+  {url:'http://127.0.0.1:8080/login',score:78,level:'HIGH',reasons:['Direct IP','Explicit port 8080'],ts: Math.floor(Date.now()/1000)-120},
+];
+setInterval(()=>{ if(!samples.length){ samples.push(...seeds); renderFeed(); updateChart(); } }, 2500);
+
+/* ---------- Legend UI behavior & reason tooltips ---------- */
+(function(){
+  const legend = document.getElementById('zsLegend');
+  const closeBtn = document.getElementById('legendClose');
+  const tooltip = document.getElementById('zsTooltip');
+
+  closeBtn.addEventListener('click', ()=> legend.style.display = 'none');
+
+  // show tooltip when hovering a reason line
+  document.addEventListener('mouseover', (ev)=>{
+    const target = ev.target;
+    if(target && target.classList && (target.classList.contains('meta') || target.classList.contains('reason-compact'))){
+      const rect = target.getBoundingClientRect();
+      const text = target.dataset && target.dataset.full ? target.dataset.full : (target.innerText || '');
+      if(!text) return;
+      tooltip.style.left = (rect.right + 12) + 'px';
+      tooltip.style.top = (rect.top) + 'px';
+      tooltip.innerText = text;
+      tooltip.style.display = 'block';
+      tooltip.setAttribute('aria-hidden','false');
+    }
+  });
+  document.addEventListener('mouseout', (ev)=>{
+    const t = ev.target;
+    if(t && (t.classList && (t.classList.contains('meta') || t.classList.contains('reason-compact')))){
+      tooltip.style.display = 'none';
+      tooltip.setAttribute('aria-hidden','true');
+    }
+  });
+
+  // click to expand/collapse a reason
+  document.addEventListener('click', (ev)=>{
+    const el = ev.target;
+    if(el && el.classList && el.classList.contains('reason-compact')){
+      const full = el.dataset.full || el.innerText;
+      const next = el.nextElementSibling;
+      if(next && next.classList && next.classList.contains('full-reason')) {
+        next.remove();
+        return;
+      }
+      const block = document.createElement('div');
+      block.className = 'full-reason';
+      block.style.marginTop = '6px';
+      block.style.color = '#d6f6ff';
+      block.style.fontSize = '13px';
+      block.innerText = full;
+      el.parentNode.insertBefore(block, el.nextSibling);
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

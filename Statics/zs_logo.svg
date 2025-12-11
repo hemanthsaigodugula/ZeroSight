@@ -1,0 +1,12 @@
+<svg width="160" height="160" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="zsgrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5af3ff"/>
+      <stop offset="100%" stop-color="#9b7bff"/>
+    </linearGradient>
+  </defs>
+  <rect x="5" y="5" width="90" height="90" rx="14" fill="url(#zsgrad)" />
+  <text x="50" y="63" font-size="42" font-weight="900" fill="#001" text-anchor="middle" font-family="Inter,Arial">
+    ZS
+  </text>
+</svg>
