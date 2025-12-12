@@ -156,9 +156,9 @@ def classify_link(url: str):
 # -----------------------------
 # Routes
 # -----------------------------
-@app.route("/")
+@app.route('/')
 def index():
-    return render_template("index.html")
+    return render_template('index.html')
 
 @app.route("/api/check_link", methods=["POST"])
 def api_check_link():
